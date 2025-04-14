@@ -1,0 +1,8 @@
+# Prevent Docker from copying unnecessary files into the container
+# Makes builds faster and images smaller
+
+__pycache__/         # Python cache files
+*.pyc                # Compiled Python files
+*.csv                # Raw or processed data files (we’ll download or mount them instead)
+.env                 # Environment variables – should never be in Docker image
+.git                 # Git config and history – not needed in container

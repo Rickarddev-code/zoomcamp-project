@@ -1,0 +1,11 @@
+# Prevent Git from tracking unnecessary or sensitive files
+# Keeps the repo clean and safe
+
+__pycache__/         # Python cache files
+*.pyc                # Compiled Python files
+*.db                 # Local SQLite DBs or similar temp files
+.env                 # Environment variables – never commit secrets!
+*.csv                # Raw data files – stored elsewhere or downloaded dynamically
+.airflow/            # Airflow local metadata and logs
+zoomcamp-456820-3b008153d0b0.json
+
