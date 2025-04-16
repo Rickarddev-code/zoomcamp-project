@@ -12,7 +12,17 @@ zoomcamp-456820-3b008153d0b0.json
 # Ignore Terraform state files (important for security)
 *.tfstate
 *.tfstate.backup
+terraform.tfstate.*
+terraform.tfvars
+
+# Ignore Terraform plugin directories (large files, unnecessary)
+.terraform/
+
 
 # Ignore Docker and VSCode-related files
 .vscode/
 .dockerignore
+
+# Exclude generated files (data.csv, labels.csv)
+data.csv
+labels.csv
