@@ -1,0 +1,32 @@
+# Ignore Google Cloud credentials
+zoomcamp-456820-3b008153d0b0.json
+
+# Ignore system and editor-specific files
+*.log
+*.bak
+*.tmp
+*.swp
+.DS_Store
+.bash_history
+
+# Ignore Terraform state files (important for security)
+*.tfstate
+*.tfstate.backup
+terraform.tfstate.*
+terraform.tfvars
+
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# Ignore Terraform plugin directories (large files, unnecessary)
+.terraform/
+
+
+# Ignore Docker and VSCode-related files
+.vscode/
+.dockerignore
+
+# Exclude generated files (data.csv, labels.csv)
+data.csv
+labels.csv
