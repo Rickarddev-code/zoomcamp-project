@@ -1,0 +1,38 @@
+﻿ID,Label
+A01,marknadföring eller försäljning
+A02,produktions- eller serviceprocesser
+A03,organisering av företagsadministrativa processer eller företagsledning
+A04,logistik
+A05,it-säkerhet
+A06,redovisning, controlling eller finansiell ledning
+A07,forskning och utveckling (FoU) eller innovationsverksamhet
+Tot250,totalt 10 eller fler anställda
+10-49,10–49 anställda
+50-249,50–249 anställda
+250-,250 eller fler anställda
+TotSNI,totalt (SNI 10-63, 68-75, 77-82, 95.1) 
+10-33,tillverkningsindustri (SNI 10-33)
+35-39,energi och återvinning (SNI 35-39)
+41-43,byggindustri (SNI 41-43)
+45-47,handel; serviceverkstäder för motorfordon (SNI 45-47)
+49-53,transport- och magasineringsföretag (SNI 49-53)
+55-56,hotell och restauranger (SNI 55-56)
+58-63,informations- och kommunikationsföretag (SNI 58-63)
+68,fastighetsbolag och förvaltare (SNI 68)
+69-82+95.1exkl.75,andra tjänsteföretag (SNI 69-74, 77-82, 95.1)
+69-75, 77-82, 95.1,andra tjänsteföretag (SNI 69-75, 77-82, 95.1)
+IKT,IKT-sektorn (SNI 26.1-26.4, 26.8, 46.5, 58.2, 61-62, 63.1, 95.1)
+SE,Sverige
+RIKS1,Stockholms län
+RIKS2,Östra mellansverige
+RIKS3,Småland med öarna
+RIKS4,Sydsverige
+RIKS5,Västsverige
+RIKS6,Norra mellansverige
+RIKS7,Mellersta Norrland
+RIKS8,Övre Norrland
+0000034S,andel, procent
+0000034T,felmarginal, ±
+2021,2021
+2023,2023
+2024,2024

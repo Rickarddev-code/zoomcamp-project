@@ -13,6 +13,14 @@ This project implements an end-to-end data pipeline to analyze how companies in 
 
 The dataset is sourced from Statistics Sweden (SCB), focusing on the usage of AI-based software or systems across company size, region, and industry from 2021 to 2024.
 
+This pipeline demonstrates a modern data engineering workflow:
+
+- Data ingestion is performed by dynamically querying SCB’s RESTful API.
+- The data is saved as a CSV file and uploaded to Google Cloud Storage.
+- A Terraform script provisions the required GCP infrastructure (bucket + dataset).
+- The ingested data is then transformed using dbt and analyzed in Looker Studio / Power BI.
+- The project is containerized using Docker and can be orchestrated via Airflow or Prefect.
+
 The goal is to create a reproducible pipeline using modern data engineering tools, with the final insights visualized in an interactive dashboard.
 
 **Tech stack:**
@@ -45,11 +53,17 @@ Before starting, make sure you have a code editor installed. If you don’t alre
 - **Install Terraform** (for provisioning infrastructure).
   - [Install Terraform here](https://www.terraform.io/downloads).
 - **Install dbt** (for data transformations).
-  - You can install dbt with `pip` (Python package manager):
+  - You can install dbt with `pip` (Python package manager). Since im using BigQuery i install the following:
     ```bash
-    pip install dbt
+    pip install dbt-bigquery
     ```
   - For detailed installation instructions, refer to the official [dbt installation guide](https://docs.getdbt.com/docs/installation).
+  - **Install Prefect** (workflow orchestration tool)
+  - Install with pip:
+    ```bash
+    pip install prefect
+    ```
+
 
 # Google Cloud Setup
 
@@ -57,12 +71,7 @@ Before starting, make sure you have a code editor installed. If you don’t alre
 1. **Create a Google Cloud Account**  
    Sign up at [Google Cloud](https://cloud.google.com/) to get started.
 
-2. **Set Up Google Cloud Storage (GCS) and BigQuery**  
-   Follow these guides to create your resources:
-   - [Create a Cloud Storage Bucket](https://cloud.google.com/storage/docs/creating-buckets) for storing raw data.
-   - [Create a BigQuery Dataset](https://cloud.google.com/bigquery/docs/datasets) for querying data.
-
-3. **Generate and Configure Service Account Credentials**  
+2. **Generate and Configure Service Account Credentials**  
    - Create a service account and generate a **JSON key** [here](https://console.cloud.google.com/iam-admin/serviceaccounts).
    - Set the credentials environment variable:
 
@@ -73,22 +82,52 @@ Before starting, make sure you have a code editor installed. If you don’t alre
 
 1. **Initialize Terraform**, **Plan** the Infrastructure Deployment, and **Apply** the Terraform Configuration to create the GCS bucket and BigQuery dataset in your Google Cloud account:
 
-   ```bash
+# Files in the `terraform/` folder:´
+ - `main.tf`         Defines the GCS bucket and BigQuery dataset 
+ - `variables.tf`    Declares input variables used by Terraform
+ - `terraform.tfvars`  Contains actual values like project ID, region, etc.
+ - `outputs.tf`        Displays output values after resources are created 
+
+ Run command:
+    ```bash
    terraform init
    terraform plan
    terraform apply
+
+Required permissions: Make sure the service account (GCS) you're using has these IAM roles:
+  - Storage Admin
+  - BigQuery Admin
+Assign roles via the IAM Console.
 
 ## Architecture
 Now that we have set up all the necessary tools and accounts, let's move on to the architecture process. The diagram below illustrates the high-level architecture of the end-to-end data pipeline implemented in this project. Each component plays a specific role in the process of ingesting, transforming, and visualizing SCB-provided CSV data. 
 
 ![Architecture Diagram](images/Architecture.png)
 
-1. SCB (CSV Data)
+
+
+1. Provision Infrastructure with Terraform  
+Terraform is used to automatically create:
+- A Google Cloud Storage (GCS) bucket for storing raw data
+- A BigQuery dataset for analytics and transformation
+
+Navigate to
+Commands:
+    ```bash
+      terraform init
+      terraform plan
+      terraform apply
+
+
+2. SCB (CSV Data)
  - Source: Data is fetched from the official [SCB Statistics Database](https://www.statistikdatabasen.scb.se/pxweb/sv/ssd/). The source data comes from the official Swedish statistics bureau (SCB).
- - Dataset: The dataset contains information on AI adoption in Swedish companies (2021, 2022 & 2024), provided in CSV format.
- - Download: We manually downloaded the CSV file for this project. In a real scenario, we’d automate this with Airflow or similar tools to fetch data periodically.
+ - Dataset: Dataset: The dataset contains information on AI adoption in Swedish companies (2021, 2023 & 2024), retrieved directly from SCB’s public PxWeb API.
+ - API Ingestion: Instead of downloading a CSV file manually, the data is fetched automatically via a Python script using a structured JSON POST request to SCB’s official API [([PxWeb API 2.0](https://www.scb.se/vara-tjanster/oppna-data/pxwebapi/pxwebapi-2.0)).
+ - Frequency: Although the underlying dataset is updated annually, the pipeline is scheduled to run monthly to simulate real-time ingestion and demonstrate workflow orchestration best practices.
+
+
  
-2. Docker (Python ETL)
+3. Docker (Python ETL)
 - Create Dockerfile: You can find the Dockerfile for the Python ETL process in the repository under the Dockerfile
 - Create Docker Image: 
     ```bash
@@ -96,45 +135,70 @@ Now that we have set up all the necessary tools and accounts, let's move on to t
 - Run Docker Container: 
      ```bash
     docker run -d --name <pick a name for containter> <name of image>
-- Python Script: The Python script inside the container will:
- - Read the downloaded SCB CSV data.
- - Upload the data to Google Cloud Storage (GCS).
+- Python Script: The Python script inside the Docker container performs the following steps:
+ - Sends a POST request to the SCB API and retrieves the filtered dataset in JSON format.
+ - Converts the response into a clean pandas DataFrame.
+ - Saves the data as a CSV file (data.csv) in the container.
+ - Uploads the CSV file to Google Cloud Storage (GCS) for downstream processing.
 
-3. GCS (Data Lake)
-Google Cloud Storage is used as a data lake to store raw data files. This allows for scalable and cost-effective storage before loading data into the warehouse.
+4. Google Cloude Storage (Data Lake)
+- Purpose: Google Cloud Storage (GCS) is used as a data lake to store the raw CSV data files before they are loaded into the data warehouse (BigQuery).
+- Data Upload: The Python ETL script inside the Docker container uploads the data.csv file into a GCS bucket for storage.
 
-4. BigQuery (Data Warehouse)
-The raw CSV data in GCS is loaded into BigQuery using batch loading jobs. BigQuery serves as the central data warehouse for querying and analytics.
+5. BigQuery (Data Warehouse)
 
-5. dbt (Transformations)
-Data Build Tool (dbt) is used to model and transform the raw data into clean, analytics-ready tables within BigQuery. dbt allows for version control, modular SQL, and testing.
+The raw CSV file stored in Google Cloud Storage is batch-loaded into BigQuery using a Python script (load_to_bigquery.py).
+BigQuery acts as the central data warehouse, enabling scalable querying and downstream transformations with dbt.
 
-6. Dashboard (Looker)
-A Looker Studio dashboard is connected to the transformed tables in BigQuery. It provides interactive visualizations, including time-based trends and categorical breakdowns.
+**Steps performed in this stage:**
+- Connect to BigQuery using the `google-cloud-bigquery` Python client.
+- Load the `data.csv` file directly from the GCS bucket (`zoomcamp-data-bucket`).
+- Create the table `ai_adoption` inside the BigQuery dataset (`zoomcamp_ai`).
+- Automatically detect schema and ingest the data.
 
-7. Terraform
-Terraform is used to provision the required cloud infrastructure on GCP. It automates the creation of:
-   The GCS bucket used as the data lake
-   The BigQuery dataset used for warehousing and transformation
+6. dbt (Transformations)
+# Overview:
+Used dbt to transform raw data in BigQuery, applying necessary translations and preparing data for analysis.
+# Steps:
+- Models: Created models to translate the Section, Classification, and Region columns.
+- Translation: Translated these columns using a join on the label table, while keeping the Company Size column unchanged.
+- Execution: Ran dbt to execute the transformations, creating the ai_adoption_translation model.
 
+7. [Dashboard](https://lookerstudio.google.com/reporting/4285d0bb-c7ef-44e3-abce-9220b4bcec80) (Looker Studio)
+To visualize AI adoption data in Swedish companies, I created a Looker Studio dashboard connected to our BigQuery database. The dashboard provides insights into AI adoption across different sectors and years (2022–2024), giving users an interactive experience to explore trends and patterns.
+# Steps Taken:
+- Connecting BigQuery Database: I connected the BigQuery database, where the transformed data is stored, to Looker Studio. This enables seamless visualization of AI adoption data.
+- Visualizations: I added several visualizations to give a comprehensive overview of the data:
+  - Bar Chart: Displays AI adoption by SNI classification and purpose (e.g., Marketing or IT Security) for the years 2022–2024.
+  - Line Chart: Shows the change in AI adoption over time (2022–2024) for each SNI classification.
+  - Tree Map: A hierarchical visualization showing the distribution of AI adoption by SNI classification.
+- Added a filter to switch between different sections.
+![Dashboard](images/Dashboard.png)
 
+8. Prefect: Workflow Orchestration
+This project uses [Prefect](https://www.prefect.io/) to automate and orchestrate the data pipeline. Prefect handles the scheduling and execution of the ingestion and transformation tasks, ensuring that the AI adoption data is processed and updated regularly without manual intervention. Although the SCB dataset updates annually, we’ve configured the workflow to run monthly to demonstrate automation best practices and efficient orchestration design.
 
+- We defined two main tasks in Prefect:
+  - Building and Running the Docker Container: This task builds and runs the Docker container that fetches data from the SCB API, processes it, and uploads it to Google Cloud Storage (GCS).
+  - Running DBT Transformations: After the Docker container task is completed, this task runs DBT transformations to process and clean the data, making it ready for analysis in BigQuery.
+-Scheduling
+  - We used Prefect's Interval Schedule to set up the flow to run every 30 days, simulating a real-time data ingestion pipeline, even though the source dataset only updates annually. This helps ensure that the data is always up to date for our analysis and visualizations.
+- Flow Execution
+  - The Prefect flow combines these tasks and is orchestrated to run automatically on a schedule, ensuring data is ingested, processed, and ready for reporting without manual intervention.
+- Deployment 
+  - The flow was deployed to Prefect Cloud, where it’s automatically triggered according to the defined schedule. This enables seamless data processing, transformation, and reporting without requiring any further input after initial setup.
 
-### Part 1: Setting Up Docker
-1. Install Docker Desktop.
-2. In your project directory, create a `Dockerfile` for your environment setup.
+### 9. Upload to GitHub
 
-### Part 2: Using Terraform
-1. Configure your GCP credentials and initialize Terraform.
-2. Apply the Terraform configuration to provision the GCS bucket and BigQuery dataset.
+To make sure Prefect can access the project files, we uploaded the following to a GitHub repository:
 
-### Part 3: Python ETL Pipeline
-1. Create a Python script to download the data from SCB (or simulate this for the project).
-2. Use the Docker container to run the Python script to upload the data into GCS.
+- **DBT SQL files** for transformations
+- **Python scripts** for ingestion and processing
+- **Dockerfile** for building the Docker image
+- **requirements.txt** listing all project dependencies
 
-### Part 4: dbt Transformations
-1. Set up dbt to connect to your BigQuery dataset.
-2. Define models and run dbt to transform the raw data into usable tables for analysis.
-
-### Part 5: Visualization
-1. Use Looker Studio or Power BI to connect to BigQuery and visualize the data.
+After uploading the files, we committed and pushed the changes to GitHub using the following commands:
+     ```bash
+        git add .
+        git commit -m "Initial commit with project files"
+        git push origin main

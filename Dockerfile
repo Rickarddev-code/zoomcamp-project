@@ -5,20 +5,22 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY requirements.txt . 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the code and data into the container
+# Copy all project files into the container
 COPY . .
 
-# Ensure data.csv is copied into the container
-COPY data/data.csv /app/data.csv
-
-# Copy the Google Cloud service account credentials file into the container
+# Copy the Google Cloud service account credentials file
 COPY zoomcamp-456820-3b008153d0b0.json /app/zoomcamp-456820-3b008153d0b0.json
 
-# Set the environment variable for Google Cloud Authentication
+# Set the environment variable for Google Cloud authentication
 ENV GOOGLE_APPLICATION_CREDENTIALS="/app/zoomcamp-456820-3b008153d0b0.json"
 
-# Run the script when the container starts
-CMD ["python", "ingest_data.py"]
+# Copy the existing ingest script and the new labels ingestion script
+COPY ingest_from_scb_api.py /app/ingest_from_scb_api.py
+COPY ingest_from_scb_labels_api.py /app/ingest_from_scb_labels_api.py
+COPY load_to_bigquery.py /app/load_to_bigquery.py 
+
+# Run ingest_from_scb_api.py first, then ingest_from_scb_labels_api.py, and then load_to_bigquery.py
+CMD ["sh", "-c", "python ingest_from_scb_api.py && python ingest_from_scb_labels_api.py && python load_to_bigquery.py"]
