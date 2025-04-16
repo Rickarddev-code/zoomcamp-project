@@ -116,6 +116,8 @@ This is done by the command showed in Terraform setup above.
 - Data Upload: Uploads the CSV data to Google Cloud Storage (GCS) for storage.
 - Data Loading to BigQuery: After the data is uploaded to GCS, the Python script loads the data from GCS into BigQuery.
 
+**Note**: The Docker image used for this project is hosted on **[Docker Hub](https://hub.docker.com/)**. 
+
 Create and run Docker Container:
   ```bash
 docker build -t <image-name> .
