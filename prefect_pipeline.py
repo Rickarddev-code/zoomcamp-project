@@ -1,5 +1,6 @@
 from prefect import task, flow
-from prefect_github import GitRepository
+from prefect_github.repository import GitHubRepository
+from prefect_github import GitHubCredentials
 from datetime import timedelta
 import subprocess
 
@@ -20,12 +21,14 @@ def build_and_run_pipeline():
     docker_task = build_and_run_docker()
     run_dbt(upstream_tasks=[docker_task])
 
-# GitHub repository setup
-source = GitRepository(
-    url="https://github.com/Rickarddev-code/zoomcamp-project.git",  # Your GitHub repository URL
-)
+# Load the GitHub blocks
+github_repository_block = GitHubRepository.load("githubrepository")  # Replace with your actual block name
+github_credentials_block = GitHubCredentials.load("githubtoken")  # Replace with your actual block name
 
-# Deploy the flow from GitHub repo
+# Use the GitHub repository and credentials block
+source = github_repository_block.get_source()  # Get the repository source from the GitHub block
+
+# Deploy the flow from the GitHub repo
 build_and_run_pipeline.from_source(
     source=source,
     entrypoint="prefect_pipeline.py:build_and_run_pipeline",  # The entry point is your prefect_pipeline.py file
